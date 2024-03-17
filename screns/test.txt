@@ -1,0 +1,64 @@
+import scrapy
+from scrapy import FormRequest
+
+class TataSpider(scrapy.Spider):
+    name = "tata"
+    allowed_domains = ["www.screener.in"]
+    tiker_list = ["MONARCH", "SUMICHEM", "TATAMOTORS"]
+
+    def parse(self, response):
+        csrf_token = response.xpath("//input[@name='csrfmiddlewaretoken']/@value").get()
+        yield FormRequest.from_response(
+            response,
+            formxpath='//form',
+            formdata={
+                'csrf_token': csrf_token,
+                'username': 'avijit4000@gmail.com',
+                'password': 'Biswas.123'
+            },
+            callback=self.after_login
+        )
+
+    def after_login(self, response):
+        # Add your logic after logging in here
+        # For example, you can extract data from the pages after logging in
+        tlist = response.xpath('//li[@class="flex flex-space-between"]')
+        for box in tlist:
+            name = box.xpath('.//span[1]/text()').get()
+            value = box.xpath('.//span[2]/span/text()').getall()
+            yield {
+                'name': name,
+                'value': value
+            }
+
+    def start_requests(self):
+        for tiker in self.tiker_list:
+            url = f"https://www.screener.in/company/{tiker}/consolidated/"
+            yield scrapy.Request(url, callback=self.parse)
+
+--------------------------------------------------------------------------------------------------------
+
+import scrapy
+from scrapy import FormRequest
+
+class TataSpider(scrapy.Spider):
+    name = "tata"
+    allowed_domains = ["www.screener.in"]
+    tiker_list = ["MONARCH", "SUMICHEM", "TATAMOTORS"]
+
+    def start_requests(self):
+        for tiker in self.tiker_list:
+            url = f"https://www.screener.in/company/{tiker}/consolidated/"
+            yield scrapy.Request(url, callback=self.parse, meta={'ticker': tiker})
+
+    def parse(self, response):
+        ticker = response.meta['ticker']
+        tlist = response.xpath('//li[@class="flex flex-space-between"]')
+        for box in tlist:
+            name = box.xpath('.//span[1]/text()').get().strip()  # Remove leading and trailing whitespaces
+            value = [v.strip() for v in box.xpath('.//span[2]/span/text()').getall()]  # Remove leading and trailing whitespaces from each value
+            yield {
+                'ticker': ticker,
+                'name': name,
+                'value': value
+            }
